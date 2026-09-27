@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Edu Sprout — Flashcards</title>
+<style>
+:root{
+  --blue-deep:#0C447C; --blue-mid:#378ADD; --blue-hover:#185FA5;
+  --blue-pale:#E6F1FB; --blue-light:#B5D4F4;
+  --grey-bg:#F4F7FB; --grey-border:#D9DEE4; --grey-text:#6B7683; --ink:#2B3440;
+  --card-bg:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --grey-bg:#0f1720; --card-bg:#17212c; --grey-border:#2a3846; --ink:#eaf1fb; --grey-text:#9fb0c3;
+  }
+}
+:root[data-theme="dark"]{
+  --grey-bg:#0f1720; --card-bg:#17212c; --grey-border:#2a3846; --ink:#eaf1fb; --grey-text:#9fb0c3;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--grey-bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  min-height:100%;
+}
+.wrap{max-width:640px;margin:0 auto;padding:18px 16px 28px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--blue-deep)}
+.brand .leaf{width:26px;height:26px;border-radius:8px;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:14px}
+:root[data-theme="dark"] .brand{color:#dce9fb}
+.seg{display:flex;background:var(--card-bg);border:1px solid var(--grey-border);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:none;background:transparent;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--grey-text);cursor:pointer}
+.seg button.on{background:var(--blue-mid);color:#fff}
+
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.chip{flex:0 0 auto;border:1px solid var(--grey-border);background:var(--card-bg);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--blue-deep);border-color:var(--blue-deep);color:#fff}
+
+.progress-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--grey-text)}
+.progress-track{flex:1;height:6px;border-radius:4px;background:var(--grey-border);overflow:hidden}
+.progress-fill{height:100%;background:var(--blue-mid);border-radius:4px;transition:width .25s ease}
+
+.stage{perspective:1400px;margin-bottom:16px}
+.card{
+  position:relative;min-height:220px;border-radius:16px;cursor:pointer;
+  transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.7,.3,1);
+}
+.card.flipped{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:26px 22px;border:1px solid var(--grey-border);
+}
+.front{background:var(--card-bg)}
+.back{background:var(--blue-deep);color:#fff;transform:rotateY(180deg)}
+.tag{position:absolute;top:14px;left:14px;font-size:11px;background:var(--blue-pale);color:var(--blue-hover);padding:3px 9px;border-radius:999px;font-weight:600}
+.back .tag{background:rgba(255,255,255,.15);color:#fff}
+.qtext{font-size:19px;font-weight:600;line-height:1.4}
+.atext{font-size:16px;line-height:1.55}
+.hint{position:absolute;bottom:12px;font-size:11px;color:var(--grey-text)}
+.back .hint{color:var(--blue-light)}
+
+.controls{display:flex;gap:10px}
+.controls button{
+  flex:1;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;
+}
+.btn-again{background:var(--card-bg);color:var(--ink);border:1px solid var(--grey-border) !important}
+.btn-shuffle{background:var(--grey-border);color:var(--ink)}
+.btn-got{background:var(--blue-mid);color:#fff}
+.empty{text-align:center;color:var(--grey-text);padding:40px 10px;font-size:14px}
+footer{text-align:center;color:var(--grey-text);font-size:11px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="leaf">🌱</span> Edu Sprout · Flashcards</div>
+    <div class="seg" role="group" aria-label="Course level">
+      <button class="on" data-level="SL" onclick="setLevel('SL')">SL</button>
+      <button data-level="HL" onclick="setLevel('HL')">HL</button>
+    </div>
+  </header>
+
+  <div class="filters" id="unitFilters"></div>
+
+  <div class="progress-row">
+    <span id="progressLabel">0 / 0</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="stage">
+    <div class="card" id="card" onclick="flip()">
+      <div class="face front">
+        <span class="tag" id="frontTag">Unit</span>
+        <div class="qtext" id="frontText">Loading…</div>
+        <span class="hint">Tap to flip</span>
+      </div>
+      <div class="face back">
+        <span class="tag" id="backTag">Unit</span>
+        <div class="atext" id="backText"></div>
+        <span class="hint">Tap to flip back</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-again" onclick="mark(false)">Again</button>
+    <button class="btn-shuffle" onclick="shuffleDeck()">Shuffle</button>
+    <button class="btn-got" onclick="mark(true)">Got it</button>
+  </div>
+
+  <footer>Original content · Edu Sprout</footer>
+</div>
+
+<script>
+const DATA = [
+  {unit:"Intro", level:"both", front:"What is the basic economic problem?", back:"Unlimited wants versus scarce resources, forcing choices about what to produce and for whom."},
+  {unit:"Intro", level:"both", front:"Define opportunity cost.", back:"The value of the next best alternative given up when making a choice."},
+  {unit:"Intro", level:"HL", front:"What does a production possibilities curve (PPC) show?", back:"The maximum combinations of two goods an economy can produce with fixed resources and technology."},
+  {unit:"Micro", level:"both", front:"What is the law of demand?", back:"As price rises, quantity demanded falls, all else equal — a downward-sloping demand curve."},
+  {unit:"Micro", level:"both", front:"Define price elasticity of demand (PED).", back:"How responsive quantity demanded is to a change in price. PED = %ΔQd ÷ %ΔP."},
+  {unit:"Micro", level:"both", front:"What is a negative externality?", back:"A cost imposed on a third party not involved in a transaction, e.g. pollution from a factory."},
+  {unit:"Micro", level:"HL", front:"What does a price ceiling below equilibrium cause?", back:"A shortage, since quantity demanded exceeds quantity supplied at that price."},
+  {unit:"Micro", level:"HL", front:"What is allocative efficiency?", back:"When price equals marginal cost (P = MC), so resources are allocated to their most valued use."},
+  {unit:"Macro", level:"both", front:"What does AD stand for and include?", back:"Aggregate Demand: C + I + G + (X − M) — consumption, investment, government spending, and net exports."},
+  {unit:"Macro", level:"both", front:"Define inflation.", back:"A sustained increase in the general price level of goods and services over time."},
+  {unit:"Macro", level:"both", front:"What is expansionary fiscal policy?", back:"Increasing government spending or cutting taxes to raise aggregate demand and stimulate growth."},
+  {unit:"Macro", level:"HL", front:"What is the Phillips Curve?", back:"A model showing the short-run trade-off between unemployment and inflation."},
+  {unit:"Macro", level:"HL", front:"What does contractionary monetary policy involve?", back:"Raising interest rates or reducing money supply to cool demand and control inflation."},
+  {unit:"Global", level:"both", front:"What is comparative advantage?", back:"The ability to produce a good at a lower opportunity cost than another producer, the basis for trade gains."},
+  {unit:"Global", level:"both", front:"Define a trade tariff.", back:"A tax on imported goods, raising their price to protect domestic producers."},
+  {unit:"Global", level:"HL", front:"What does a current account deficit mean?", back:"A country is importing more goods, services, and income than it exports, and must finance the gap."},
+];
+
+const UNITS = ["All","Intro","Micro","Macro","Global"];
+let level = "SL";
+let unit = "All";
+let deck = [];
+let idx = 0;
+let flipped = false;
+let progress = {};
+
+function buildFilters(){
+  const el = document.getElementById('unitFilters');
+  el.innerHTML = '';
+  UNITS.forEach(u=>{
+    const b = document.createElement('button');
+    b.className = 'chip' + (u===unit ? ' on' : '');
+    b.textContent = u;
+    b.onclick = ()=>{ unit = u; buildFilters(); buildDeck(); };
+    el.appendChild(b);
+  });
+}
+
+function setLevel(l){
+  level = l;
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.level===l));
+  buildDeck();
+}
+
+function buildDeck(){
+  deck = DATA.filter(c => (unit==="All" || c.unit===unit) && (c.level==="both" || c.level===level));
+  idx = 0; flipped = false;
+  render();
+}
+
+function shuffleDeck(){
+  for(let i=deck.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]] = [deck[j],deck[i]];
+  }
+  idx = 0; flipped = false;
+  render();
+}
+
+function flip(){
+  if(!deck.length) return;
+  flipped = !flipped;
+  document.getElementById('card').classList.toggle('flipped', flipped);
+}
+
+function mark(){
+  if(!deck.length) return;
+  idx = (idx+1) % deck.length;
+  flipped = false;
+  render();
+}
+
+function render(){
+  const card = document.getElementById('card');
+  card.classList.remove('flipped');
+  const total = deck.length;
+  document.getElementById('progressLabel').textContent = total ? `${idx+1} / ${total}` : '0 / 0';
+  document.getElementById('progressFill').style.width = total ? `${((idx)/total)*100}%` : '0%';
+
+  if(!total){
+    document.getElementById('frontText').textContent = 'No cards in this unit yet for this level.';
+    document.getElementById('backText').textContent = '';
+    document.getElementById('frontTag').textContent = unit;
+    document.getElementById('backTag').textContent = unit;
+    return;
+  }
+  const c = deck[idx];
+  document.getElementById('frontTag').textContent = c.unit;
+  document.getElementById('backTag').textContent = c.unit;
+  document.getElementById('frontText').textContent = c.front;
+  document.getElementById('backText').textContent = c.back;
+}
+
+buildFilters();
+buildDeck();
+</script>
+</body>
+</html>
